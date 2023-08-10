@@ -13,5 +13,6 @@ data class Note(
     @TypeConverters(OdtConverter::class)
     var date: OffsetDateTime = OffsetDateTime.now(),
     var checkBox: Boolean = false,
-    var text: String = ""
+    var text: String = "",
+    var title: String = text.substringBefore('\n')
 )

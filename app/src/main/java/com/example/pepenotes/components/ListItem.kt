@@ -3,6 +3,7 @@ package com.example.pepenotes.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -19,31 +20,25 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.pepenotes.domain.Note
 import java.time.format.DateTimeFormatter
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListItem(
-    card: Note,
+    note: Note,
     onFlagChange: (Boolean) -> Unit,
-    onContentChange: (String) -> Unit,
-    onDelete: (Note) -> Unit
+    onDelete: (Note) -> Unit,
+    onClick: () -> Unit
 ) {
     Column {
         Row(
@@ -53,7 +48,7 @@ fun ListItem(
                 .fillMaxWidth()
         ) {
             Text(
-                text = card.date.format(DateTimeFormatter.ofPattern("d MMMM")),
+                text = note.date.format(DateTimeFormatter.ofPattern("d MMMM")),
             )
             Spacer(
                 modifier = Modifier
@@ -61,7 +56,7 @@ fun ListItem(
                     .fillMaxHeight()
             )
             Text(
-                text = card.date.format(DateTimeFormatter.ofPattern("YYYY")),
+                text = note.date.format(DateTimeFormatter.ofPattern("YYYY")),
             )
         }
 
@@ -73,12 +68,11 @@ fun ListItem(
             border = BorderStroke(1.dp, color = Color.DarkGray),
             shape = RoundedCornerShape(5.dp)
         ) {
-            val cursorPos = remember { mutableStateOf(TextRange(card.text.length)) }
             Row(
                 Modifier.height(IntrinsicSize.Min)
             ) {
                 Checkbox(
-                    checked = card.checkBox,
+                    checked = note.checkBox,
                     onCheckedChange = { onFlagChange(it) },
                     modifier = Modifier.align(Alignment.CenterVertically)
                 )
@@ -88,13 +82,13 @@ fun ListItem(
                         .width(2.dp),
                     thickness = 5.dp
                 )
-                TextField(
-                    value = TextFieldValue(card.text, cursorPos.value),
-                    onValueChange = {
-                        onContentChange(it.text)
-                        cursorPos.value = it.selection
-                    },
-                    Modifier.fillMaxWidth(0.85F)
+                Text(
+                    text = note.title,
+                    Modifier
+                        .fillMaxWidth(0.85F)
+                        .fillMaxHeight()
+                        .clickable { onClick() },
+                    fontSize = 20.sp
                 )
                 Divider(
                     modifier = Modifier
@@ -103,7 +97,7 @@ fun ListItem(
                     thickness = 5.dp
                 )
                 IconButton(
-                    onClick = { onDelete(card) },
+                    onClick = { onDelete(note) },
                     Modifier.align(Alignment.CenterVertically)
                 ) {
                     Icon(

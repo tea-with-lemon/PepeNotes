@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.pepenotes.domain.DataBase
 import com.example.pepenotes.domain.Note
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -21,6 +22,7 @@ import java.time.OffsetDateTime
 @Suppress("UNCHECKED_CAST")
 class MainViewModel(val database: DataBase, private val savedStateHandle: SavedStateHandle) :
     ViewModel() {
+    @OptIn(ExperimentalCoroutinesApi::class)
     val itemsList =
         //в getstateflow отслеживаем значения по ключу all, нам прилетают значения потоком Flow,
         // flatmap преобразует значение в Flow<Value>
@@ -40,7 +42,7 @@ class MainViewModel(val database: DataBase, private val savedStateHandle: SavedS
                         }
                 }
             }
-    //какая-то непонятная залупа
+
     val isFiltered = savedStateHandle.getStateFlow("all", true).map { flag -> !flag }
 
     fun insertItem() = viewModelScope.launch {
