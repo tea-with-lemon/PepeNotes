@@ -85,10 +85,13 @@ fun ListItem(
                 Text(
                     text = note.title,
                     Modifier
+                        .padding(10.dp)
                         .fillMaxWidth(0.85F)
                         .fillMaxHeight()
+                        .align(Alignment.CenterVertically)
                         .clickable { onClick() },
-                    fontSize = 20.sp
+                    fontSize = 20.sp,
+                    maxLines = 1
                 )
                 Divider(
                     modifier = Modifier

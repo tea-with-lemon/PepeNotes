@@ -21,4 +21,7 @@ interface NoteDao {
 
     @Query("SELECT * FROM note_table WHERE date = :date")
     fun getByDate(date: OffsetDateTime): Flow<List<Note>>
+
+    @Query("SELECT * FROM note_table WHERE INSTR(lower(text), lower(:query)) != 0")
+    fun searching(query: String?): Flow<List<Note>>
 }

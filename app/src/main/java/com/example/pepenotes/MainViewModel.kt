@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.example.pepenotes.components.SearchField
 import com.example.pepenotes.domain.DataBase
 import com.example.pepenotes.domain.Note
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,13 +25,13 @@ class MainViewModel(val database: DataBase, private val savedStateHandle: SavedS
     ViewModel() {
     @OptIn(ExperimentalCoroutinesApi::class)
     val itemsList =
-        //в getstateflow отслеживаем значения по ключу all, нам прилетают значения потоком Flow,
+    //в getstateflow отслеживаем значения по ключу all, нам прилетают значения потоком Flow,
         // flatmap преобразует значение в Flow<Value>
-        savedStateHandle.getStateFlow<Boolean>("all", true)
+        savedStateHandle.getStateFlow<Int>("currentState", 1)
             .flatMapLatest { flag ->
-                if (flag) {
+                if (flag == 1) {
                     database.dao.getAll()
-                } else {
+                } else if (flag == 2) {
                     //а тут отслеживаем значения по ключу date
                     savedStateHandle.getStateFlow<Long>("date", 0)
                         .flatMapLatest { date ->
@@ -40,10 +41,19 @@ class MainViewModel(val database: DataBase, private val savedStateHandle: SavedS
                             )
                             database.dao.getByDate(odt)
                         }
+                } else if (flag == 3) {
+                    savedStateHandle.getStateFlow<String?>("search", "").flatMapLatest {
+                        query -> database.dao.searching(query)
+                    }
+
+                } else {
+                    database.dao.getAll()
                 }
             }
 
-    val isFiltered = savedStateHandle.getStateFlow("all", true).map { flag -> !flag }
+    val isFilteredByDate = savedStateHandle.getStateFlow("currentState", 1).map { flag ->
+        flag == 2
+    }
 
     fun insertItem() = viewModelScope.launch {
         val note = Note()
@@ -60,12 +70,17 @@ class MainViewModel(val database: DataBase, private val savedStateHandle: SavedS
 
     fun getByDate(date: OffsetDateTime) = viewModelScope.launch {
         savedStateHandle["date"] = date.toInstant().toEpochMilli()
-        savedStateHandle["all"] = false
+        savedStateHandle["currentState"] = 2
     }
 
     fun changeValueByAll() {
         savedStateHandle["date"] = 0
-        savedStateHandle["all"] = true
+        savedStateHandle["currentState"] = 1
+    }
+
+    fun searching(query: String) {
+        savedStateHandle["search"] = query
+        savedStateHandle["currentState"] = 3
     }
 
     companion object {

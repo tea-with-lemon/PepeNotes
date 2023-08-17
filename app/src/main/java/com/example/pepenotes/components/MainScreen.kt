@@ -5,13 +5,17 @@ import android.util.Log
 import android.widget.CalendarView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Scaffold
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -23,10 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pepenotes.MainViewModel
 import com.example.pepenotes.R
 import com.example.pepenotes.domain.Note
+import kotlinx.coroutines.async
 import java.time.OffsetDateTime
 
 
@@ -36,9 +42,10 @@ fun MainScreen(
 ) {
     val calendarState = remember { mutableStateOf(false) }
     val itemsList = mainViewModel.itemsList.collectAsState(initial = emptyList())
-    val isFiltered = mainViewModel.isFiltered.collectAsState(initial = false)
+    val isFiltered = mainViewModel.isFilteredByDate.collectAsState(initial = false)
     val showFullNote = remember { mutableStateOf(false) }
     val currentNote: MutableState<Note?> = remember { mutableStateOf(null) }
+    val isButtonAddClicked = remember { mutableStateOf(false) }
     Scaffold(topBar = {
         TopBar(calendarState = calendarState, showFullNote = showFullNote)
     }) { contentPadding ->
@@ -57,13 +64,15 @@ fun MainScreen(
                             currentNote.value!!.title.contentEquals(
                                 currentNote.value!!.text.substring(
                                     0,
-                                    minOf(currentNote.value!!.title.length, currentNote.value!!.text.length)
+                                    minOf(
+                                        currentNote.value!!.title.length,
+                                        currentNote.value!!.text.length
+                                    )
                                 )
                             )
                         } else {
                             false
                         }
-
                     )
                 }
                 NoteFragment(
@@ -84,22 +93,32 @@ fun MainScreen(
                     }
                 )
             } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.Top,
-                    modifier = Modifier
-                        .padding(contentPadding)
-                        .fillMaxHeight()
-                ) {
-                    items(itemsList.value) { item ->
-                        ListItem(note = item,
-                            { checkBox -> mainViewModel.update(item.copy(checkBox = checkBox)) },
-                            { mainViewModel.delete(item) },
-                            {
-                                showFullNote.value = true
-                                currentNote.value = item
-                            })
+                val listState = rememberLazyListState()
+                if (isButtonAddClicked.value) {
+                    //Log.d("DEBUG", listState.layoutInfo.totalItemsCount.toString())
+                }
+                Column {
+                    SearchField { mainViewModel.searching(it) }
+                    Divider(Modifier.fillMaxWidth())
+                    LazyColumn(
+                        state = listState,
+                        verticalArrangement = Arrangement.Top,
+                        modifier = Modifier
+                            .padding(contentPadding)
+                            .fillMaxHeight()
+                    ) {
+                        items(itemsList.value) { item ->
+                            ListItem(note = item,
+                                { checkBox -> mainViewModel.update(item.copy(checkBox = checkBox)) },
+                                { mainViewModel.delete(item) },
+                                {
+                                    showFullNote.value = true
+                                    currentNote.value = item
+                                })
+                        }
                     }
                 }
+                
                 if (isFiltered.value) {
                     IconButton(
                         onClick = {
@@ -114,12 +133,22 @@ fun MainScreen(
                     }
                 } else {
                     IconButton(
-                        onClick = { mainViewModel.insertItem() },
+                        onClick = {
+                            mainViewModel.viewModelScope.async {
+                                mainViewModel.database.dao.insert(Note())
+                                Log.d("DEBUG", itemsList.value.lastIndex.toString())
+                                isButtonAddClicked.value = true
+                                listState.scrollToItem(
+                                    itemsList.value.lastIndex,
+                                    0
+                                )
+                            }
+                        },
                         Modifier.align(Alignment.BottomEnd)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.add_button),
-                            contentDescription = null
+                            painter = painterResource(id = R.drawable.icon_add),
+                            contentDescription = "add"
                         )
                     }
                 }
@@ -132,7 +161,7 @@ fun MainScreen(
 fun DatePickerCustom(onClick: (Int, Int, Int) -> Unit) {
     AndroidView(
         { CalendarView(it) },
-        modifier = Modifier.wrapContentWidth(),
+        modifier = Modifier.fillMaxSize(),
         update = { views ->
             views.setOnDateChangeListener { _, y, m, d ->
                 onClick(y, m + 1, d)
